@@ -22,11 +22,10 @@ const statElements = {
 
 let world = null;
 let isLoading = false;
-
-const cameraApi = createCamera(canvas);
-const input = createInputController(canvas, cameraApi);
-const tileSet = await loadTileSet();
-const renderer = createRenderer(canvas, cameraApi, tileSet);
+let cameraApi = null;
+let input = null;
+let renderer = null;
+let tileSet = null;
 
 function setStatus(message) {
   statusElement.textContent = message;
@@ -88,14 +87,26 @@ function boot() {
   requestAnimationFrame(frame);
 }
 
-reloadButton.addEventListener('click', () => loadWorld({ force: true }));
-resetButton.addEventListener('click', () => {
-  if (world) cameraApi.centerOn(world.bounds);
-});
+async function init() {
+  cameraApi = createCamera(canvas);
+  input = createInputController(canvas, cameraApi);
+  tileSet = await loadTileSet();
+  renderer = createRenderer(canvas, cameraApi, tileSet);
 
-window.addEventListener('resize', () => {
-  renderer.resize();
-  if (world) cameraApi.centerOn(world.bounds);
-});
+  reloadButton.addEventListener('click', () => loadWorld({ force: true }));
+  resetButton.addEventListener('click', () => {
+    if (world) cameraApi.centerOn(world.bounds);
+  });
 
-boot();
+  window.addEventListener('resize', () => {
+    renderer.resize();
+    if (world) cameraApi.centerOn(world.bounds);
+  });
+
+  boot();
+}
+
+init().catch(error => {
+  console.error(error);
+  setStatus('No se pudo iniciar el juego. Revisa la consola para más detalles.');
+});

@@ -1,7 +1,7 @@
 {
-  "name": "js-template",
-  "version": "1.0.0",
-  "description": "Template moderno para proyectos HTML, CSS y JavaScript con Tailwind CSS.",
+  "name": "rpgmap",
+  "version": "0.1.0",
+  "description": "Prototipo RPG que recrea mapas reales con datos de OpenStreetMap y Overpass.",
   "type": "module",
   "private": false,
   "scripts": {
@@ -13,13 +13,13 @@
     "format:check": "prettier . --check"
   },
   "keywords": [
-    "html",
-    "css",
-    "javascript",
-    "tailwindcss",
+    "rpg",
+    "map",
+    "openstreetmap",
+    "overpass",
+    "canvas",
     "vite",
-    "template",
-    "frontend"
+    "tailwindcss"
   ],
   "author": "Jorge Alonso",
   "license": "MIT",

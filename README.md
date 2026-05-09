@@ -34,13 +34,31 @@ En GitHub, ve a:
 Settings → Pages → Build and deployment → Source → GitHub Actions
 ```
 
-La URL final será parecida a:
+El dominio configurado es:
 
 ```text
-https://jalonsomerchan.github.io/rpgmap/
+https://rpgmaker.alon.one/
 ```
 
-El `vite.config.js` incluye `base: '/rpgmap/'`, necesario para que los assets funcionen correctamente bajo GitHub Pages.
+El archivo `public/CNAME` contiene `rpgmaker.alon.one`, por lo que Vite lo copiará a `dist/CNAME` durante el build. El `vite.config.js` usa `base: '/'`, que es lo correcto para un dominio propio servido desde la raíz.
+
+## DNS del dominio
+
+Para que `rpgmaker.alon.one` apunte a GitHub Pages, crea un registro DNS:
+
+```text
+Tipo: CNAME
+Nombre/Host: rpgmaker
+Valor/Destino: jalonsomerchan.github.io
+```
+
+Después, en GitHub Pages, configura el custom domain como:
+
+```text
+rpgmaker.alon.one
+```
+
+Activa también **Enforce HTTPS** cuando GitHub lo permita.
 
 ## Controles
 
@@ -78,14 +96,9 @@ src/js/
 
 ## Tileset
 
-El renderer busca automáticamente un tileset en estas rutas:
+El tileset se importa desde `src/assets/tileset.png` mediante Vite, así que en producción queda publicado en `dist/assets` con nombre versionado/hash automáticamente.
 
-- `/src/assets/tileset.png`
-- `/src/assets/tileset.webp`
-- `/src/assets/rpg-tileset.png`
-- `/assets/tileset.png`
-
-Si no encuentra ninguno, usa patrones procedurales para que el prototipo funcione igualmente.
+Si no encuentra el tileset, usa patrones procedurales para que el prototipo funcione igualmente.
 
 ## Próximos pasos recomendados
 

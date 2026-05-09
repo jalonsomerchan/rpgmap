@@ -2,10 +2,10 @@ export function createCamera(canvas) {
   const camera = {
     x: 0,
     y: 0,
-    zoom: 1.45,
-    minZoom: 0.65,
-    maxZoom: 4,
-    speed: 9,
+    zoom: 2.15,
+    minZoom: 1.1,
+    maxZoom: 5.5,
+    speed: 11,
   };
 
   function clampZoom(value) {
@@ -40,7 +40,7 @@ export function createCamera(canvas) {
     camera.y = bounds.minY + bounds.height / 2;
     const zoomX = canvas.width / Math.max(bounds.width, 1);
     const zoomY = canvas.height / Math.max(bounds.height, 1);
-    camera.zoom = clampZoom(Math.min(zoomX, zoomY) * 0.86);
+    camera.zoom = clampZoom(Math.min(zoomX, zoomY) * 1.75);
   }
 
   return { camera, screenToWorld, worldToScreen, zoomAt, centerOn };

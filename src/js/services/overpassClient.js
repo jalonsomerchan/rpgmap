@@ -10,13 +10,13 @@ export function buildOverpassQuery(region) {
   return `
 [out:json][timeout:${OVERPASS_CONFIG.timeoutSeconds}];
 (
-  way["highway"]["highway"!="footway"]["highway"!="path"]["highway"!="steps"](${bbox});
+  way["highway"~"motorway|trunk|primary|secondary|tertiary|residential|service|unclassified|living_street|pedestrian|footway|path|track"](${bbox});
   way["building"](${bbox});
-  way["waterway"~"river|stream|canal"](${bbox});
+  way["waterway"~"river|stream|canal|ditch|drain"](${bbox});
   way["natural"="water"](${bbox});
   relation["natural"="water"](${bbox});
-  way["landuse"~"forest|grass|meadow|recreation_ground"](${bbox});
-  way["natural"~"wood|scrub|grassland"](${bbox});
+  way["landuse"~"forest|grass|meadow|recreation_ground|farmland|orchard"](${bbox});
+  way["natural"~"wood|scrub|grassland|tree_row"](${bbox});
   way["leisure"~"park|garden"](${bbox});
 );
 out body;

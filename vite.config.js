@@ -2,7 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: '/rpgmap/',
+  base: '/',
   plugins: [tailwindcss()],
   server: {
     host: '0.0.0.0',

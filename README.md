@@ -11,6 +11,37 @@ npm install
 npm run dev
 ```
 
+## Build de producción
+
+```bash
+npm run build
+npm run preview
+```
+
+## Despliegue en GitHub Pages
+
+Este proyecto usa Vite, por lo que **no debe publicarse directamente desde la raíz del repositorio**. Primero hay que compilarlo y publicar la carpeta `dist`.
+
+Ya queda incluido el workflow `.github/workflows/deploy-pages.yml`, que hace esto automáticamente cuando se fusiona a `main`:
+
+1. Instala dependencias con `npm ci`.
+2. Ejecuta `npm run build`.
+3. Sube `dist` a GitHub Pages.
+
+En GitHub, ve a:
+
+```text
+Settings → Pages → Build and deployment → Source → GitHub Actions
+```
+
+La URL final será parecida a:
+
+```text
+https://jalonsomerchan.github.io/rpgmap/
+```
+
+El `vite.config.js` incluye `base: '/rpgmap/'`, necesario para que los assets funcionen correctamente bajo GitHub Pages.
+
 ## Controles
 
 - `WASD` o flechas: mover cámara.

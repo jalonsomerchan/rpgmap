@@ -1,8 +1,9 @@
+import tileSetUrl from '../../assets/tileset.png?url';
+
 export async function loadTileSet() {
   const candidates = [
-    '/src/assets/tileset.png',
-    '/src/assets/tileset.webp',
-    '/src/assets/rpg-tileset.png',
+    tileSetUrl,
+    '/tileset.png',
     '/assets/tileset.png',
   ];
 

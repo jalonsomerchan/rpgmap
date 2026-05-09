@@ -28,8 +28,23 @@ const ATLAS = Object.freeze({
 const FEATURE_PRIORITY = Object.freeze({
   nature: 1,
   water: 2,
-  road: 3,
-  building: 4,
+  building: 3,
+});
+
+const ROAD_STYLE = Object.freeze({
+  motorway: { width: 12, fill: '#d8bf7f', edge: '#5b4a31' },
+  trunk: { width: 11, fill: '#d8bf7f', edge: '#5b4a31' },
+  primary: { width: 10, fill: '#d8bf7f', edge: '#5b4a31' },
+  secondary: { width: 8, fill: '#cdb172', edge: '#584830' },
+  tertiary: { width: 7, fill: '#c3a66a', edge: '#51442e' },
+  residential: { width: 6, fill: '#b89d6a', edge: '#4f4433' },
+  living_street: { width: 5, fill: '#b89d6a', edge: '#4f4433' },
+  service: { width: 4, fill: '#a69065', edge: '#4a4032' },
+  pedestrian: { width: 4, fill: '#d6c28f', edge: '#5b503b' },
+  footway: { width: 3, fill: '#d6c28f', edge: '#5b503b' },
+  path: { width: 3, fill: '#d6c28f', edge: '#5b503b' },
+  track: { width: 3, fill: '#927b4d', edge: '#473b27' },
+  default: { width: 5, fill: '#b89d6a', edge: '#4f4433' },
 });
 
 export function createRenderer(canvas, cameraApi, tileSet) {
@@ -90,11 +105,6 @@ export function createRenderer(canvas, cameraApi, tileSet) {
     return true;
   }
 
-  function drawIsoSprite(sprite, cx, cy) {
-    if (drawSprite(sprite, cx - ISO.tileW / 2, cy - ISO.tileH / 2, ISO.tileW, ISO.tileW)) return;
-    drawIsoDiamond(cx, cy, '#294f2d');
-  }
-
   function drawObjectSprite(sprite, cx, cy, heightTiles = 1) {
     const height = ISO.objectSprite * heightTiles;
     if (drawSprite(sprite, cx - ISO.objectSprite / 2, cy + ISO.tileH / 2 - height, ISO.objectSprite, height)) return;
@@ -103,22 +113,6 @@ export function createRenderer(canvas, cameraApi, tileSet) {
 
   function isPointInBounds(point, bounds) {
     return point.x >= bounds.minX && point.x <= bounds.maxX && point.y >= bounds.minY && point.y <= bounds.maxY;
-  }
-
-  function isPointNearSegment(point, a, b, tolerance) {
-    const vx = b.x - a.x;
-    const vy = b.y - a.y;
-    const wx = point.x - a.x;
-    const wy = point.y - a.y;
-    const lengthSquared = vx * vx + vy * vy;
-
-    if (lengthSquared === 0) return Math.hypot(point.x - a.x, point.y - a.y) <= tolerance;
-
-    const t = Math.max(0, Math.min(1, (wx * vx + wy * vy) / lengthSquared));
-    const px = a.x + t * vx;
-    const py = a.y + t * vy;
-
-    return Math.hypot(point.x - px, point.y - py) <= tolerance;
   }
 
   function pointInPolygon(point, polygon) {
@@ -134,28 +128,20 @@ export function createRenderer(canvas, cameraApi, tileSet) {
     return inside;
   }
 
-  function featureCoversPoint(feature, point) {
+  function featureCoversAreaCell(feature, point) {
     if (!isPointInBounds(point, feature.bounds)) return false;
-
-    if (feature.closed && feature.points.length > 3) {
-      return pointInPolygon(point, feature.points);
-    }
-
-    const tolerance = feature.type === 'road' ? TILE_SIZE * 0.62 : TILE_SIZE * 0.48;
-    for (let index = 1; index < feature.points.length; index += 1) {
-      if (isPointNearSegment(point, feature.points[index - 1], feature.points[index], tolerance)) {
-        return true;
-      }
-    }
-
-    return false;
+    if (!feature.closed || feature.points.length <= 3) return false;
+    return pointInPolygon(point, feature.points);
   }
 
   function classifyCell(features, point) {
     let result = { type: 'grass', feature: null, priority: 0 };
 
     for (const feature of features) {
-      if (!featureCoversPoint(feature, point)) continue;
+      if (feature.type === 'road') continue;
+      if (feature.type === 'water' && !feature.closed) continue;
+      if (!featureCoversAreaCell(feature, point)) continue;
+
       const priority = FEATURE_PRIORITY[feature.type] || 0;
       if (priority >= result.priority) {
         result = { type: feature.type, feature, priority };
@@ -167,7 +153,6 @@ export function createRenderer(canvas, cameraApi, tileSet) {
 
   function getTileSprite(cell, col, row) {
     if (cell.type === 'water') return (col + row) % 2 === 0 ? ATLAS.water : ATLAS.waterAlt;
-    if (cell.type === 'road') return Math.abs(col - row) % 2 === 0 ? ATLAS.road : ATLAS.roadAlt;
     if (cell.type === 'nature') {
       const isForest = cell.feature?.tags?.landuse === 'forest' || cell.feature?.tags?.natural === 'wood';
       return isForest ? ATLAS.forest : ATLAS.grassAlt;
@@ -184,7 +169,6 @@ export function createRenderer(canvas, cameraApi, tileSet) {
         grass: patterns.grass || '#234525',
         nature: patterns.forest || '#245c2e',
         water: patterns.water || '#287d9f',
-        road: patterns.road || '#817766',
         building: patterns.building || '#a68462',
       };
       drawIsoDiamond(cx, cy, fillByType[cell.type] || fillByType.grass);
@@ -192,7 +176,7 @@ export function createRenderer(canvas, cameraApi, tileSet) {
   }
 
   function drawBuilding(cx, cy, col, row) {
-    const floors = (Math.abs(col * 17 + row * 31) % 3) + 1;
+    const floors = (Math.abs(col * 17 + row * 31) % 2) + 1;
     for (let level = 0; level < floors; level += 1) {
       const sprite = (col + row + level) % 2 === 0 ? ATLAS.building : ATLAS.buildingAlt;
       drawObjectSprite(sprite, cx, cy - level * 13, 1);
@@ -239,26 +223,55 @@ export function createRenderer(canvas, cameraApi, tileSet) {
     }
   }
 
-  function drawImportantLines(features) {
-    ctx.save();
-    ctx.globalAlpha = 0.28;
+  function drawIsoFeaturePath(feature, { width, fill, edge, alpha = 1 }) {
+    if (feature.points.length < 2) return;
 
-    for (const feature of features) {
-      if (feature.type !== 'road' && feature.type !== 'water') continue;
-      ctx.beginPath();
-      feature.points.forEach((point, index) => {
-        const iso = worldToIso(point);
-        if (index === 0) ctx.moveTo(iso.x, iso.y);
-        else ctx.lineTo(iso.x, iso.y);
-      });
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.strokeStyle = feature.type === 'water' ? '#4fb7d7' : '#d2bd83';
-      ctx.lineWidth = (feature.type === 'water' ? 5 : 3) / cameraApi.camera.zoom;
-      ctx.stroke();
-    }
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    ctx.beginPath();
+    feature.points.forEach((point, index) => {
+      const iso = worldToIso(point);
+      if (index === 0) ctx.moveTo(iso.x, iso.y + ISO.tileH * 0.45);
+      else ctx.lineTo(iso.x, iso.y + ISO.tileH * 0.45);
+    });
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = (width + 4) / cameraApi.camera.zoom;
+    ctx.stroke();
+
+    ctx.beginPath();
+    feature.points.forEach((point, index) => {
+      const iso = worldToIso(point);
+      if (index === 0) ctx.moveTo(iso.x, iso.y + ISO.tileH * 0.45);
+      else ctx.lineTo(iso.x, iso.y + ISO.tileH * 0.45);
+    });
+    ctx.strokeStyle = fill;
+    ctx.lineWidth = width / cameraApi.camera.zoom;
+    ctx.stroke();
 
     ctx.restore();
+  }
+
+  function drawRoadsAndRivers(features) {
+    const linearWater = features.filter(feature => feature.type === 'water' && !feature.closed);
+    const roads = features.filter(feature => feature.type === 'road');
+
+    for (const feature of linearWater) {
+      const isRiver = feature.tags.waterway === 'river' || feature.tags.waterway === 'canal';
+      drawIsoFeaturePath(feature, {
+        width: isRiver ? 12 : 7,
+        fill: isRiver ? '#33bfe0' : '#4cc9e8',
+        edge: '#145d75',
+        alpha: 0.96,
+      });
+    }
+
+    for (const feature of roads) {
+      const style = ROAD_STYLE[feature.tags.highway] || ROAD_STYLE.default;
+      drawIsoFeaturePath(feature, { ...style, alpha: 0.98 });
+    }
   }
 
   function drawPlayer() {
@@ -287,7 +300,7 @@ export function createRenderer(canvas, cameraApi, tileSet) {
     applyCamera();
     ctx.imageSmoothingEnabled = false;
     drawIsoGrid(world);
-    drawImportantLines(world.features);
+    drawRoadsAndRivers(world.features);
     drawPlayer();
     ctx.restore();
   }

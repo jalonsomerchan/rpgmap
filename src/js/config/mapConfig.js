@@ -13,7 +13,7 @@ export const PLASENCIA_START_REGION = Object.freeze({
 
 export const OVERPASS_CONFIG = Object.freeze({
   endpoint: 'https://overpass-api.de/api/interpreter',
-  cacheVersion: 2,
+  cacheVersion: 3,
   cacheTtlMs: 1000 * 60 * 60 * 24 * 7,
   minManualRefreshMs: 1000 * 60 * 5,
   timeoutSeconds: 25,
@@ -23,8 +23,8 @@ export const TILE_SIZE = 32;
 export const WORLD_SCALE = 105000;
 
 export const FEATURE_LIMITS = Object.freeze({
-  maxBuildings: 260,
-  maxRoads: 140,
-  maxWater: 40,
-  maxNature: 70,
+  maxBuildings: 320,
+  maxRoads: 260,
+  maxWater: 100,
+  maxNature: 110,
 });

@@ -1,12 +1,10 @@
 import '../css/main.css';
 
-import { PLASENCIA_START_REGION } from './config/mapConfig.js';
 import { createCamera } from './game/camera.js';
 import { createInputController } from './game/inputController.js';
 import { createRenderer } from './game/renderer.js';
 import { loadTileSet } from './game/tileSet.js';
-import { parseOsmToWorld } from './map/osmParser.js';
-import { fetchRegionOsm } from './services/overpassClient.js';
+import { createWorldChunkManager } from './map/worldChunks.js';
 
 const canvas = document.querySelector('#game-canvas');
 const statusElement = document.querySelector('#map-status');
@@ -21,11 +19,12 @@ const statElements = {
 };
 
 let world = null;
-let isLoading = false;
 let cameraApi = null;
 let input = null;
 let renderer = null;
 let tileSet = null;
+let chunkManager = null;
+let lastChunkCheckAt = 0;
 
 function setStatus(message) {
   statusElement.textContent = message;
@@ -38,43 +37,31 @@ function setStats(stats) {
 }
 
 function setBusy(nextBusy) {
-  isLoading = nextBusy;
   reloadButton.disabled = nextBusy;
-  reloadButton.textContent = nextBusy ? 'Cargando...' : 'Cargar / refrescar Plasencia';
+  reloadButton.textContent = nextBusy ? 'Cargando...' : 'Cargar / refrescar zona';
 }
 
-function formatSavedAt(timestamp) {
-  return new Intl.DateTimeFormat('es-ES', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(new Date(timestamp));
-}
+function handleWorldChange(nextWorld) {
+  const hadWorld = Boolean(world?.features?.length);
+  world = nextWorld;
+  setStats(world.stats);
 
-async function loadWorld({ force = false } = {}) {
-  if (isLoading) return;
-
-  try {
-    setBusy(true);
-    setStatus(force ? 'Consultando Overpass con control de frecuencia...' : 'Buscando datos en caché local...');
-
-    const { payload, source, savedAt } = await fetchRegionOsm(PLASENCIA_START_REGION, { force });
-    world = parseOsmToWorld(payload, PLASENCIA_START_REGION);
+  if (!hadWorld && world.features.length > 0) {
     cameraApi.centerOn(world.bounds);
-    setStats(world.stats);
-
-    const sourceText = source === 'cache' ? 'caché local' : 'Overpass';
-    const tileText = renderer.hasExternalTileSet ? `tileset externo (${tileSet.source})` : 'tileset procedural';
-    setStatus(`${world.region.name}: ${world.features.length} elementos desde ${sourceText}. Guardado: ${formatSavedAt(savedAt)}. Render: ${tileText}.`);
-  } catch (error) {
-    console.error(error);
-    setStatus(error instanceof Error ? error.message : 'No se pudo cargar el mapa.');
-  } finally {
-    setBusy(false);
   }
+}
+
+function requestNearbyChunks() {
+  const now = Date.now();
+  if (!chunkManager || !cameraApi || now - lastChunkCheckAt < 900) return;
+
+  lastChunkCheckAt = now;
+  chunkManager.enqueueAroundCamera(cameraApi.camera);
 }
 
 function frame() {
   input.update();
+  requestNearbyChunks();
   renderer.render(world);
   requestAnimationFrame(frame);
 }
@@ -82,8 +69,8 @@ function frame() {
 function boot() {
   renderer.resize();
   input.bind();
-  setStatus('Pulsa “Cargar / refrescar Plasencia” para pedir los datos iniciales. Si ya existe caché, se usará automáticamente.');
-  loadWorld({ force: false });
+  setStatus('Cargando Plasencia por chunks. Al moverte se irán descargando zonas cercanas sin hacer peticiones masivas.');
+  chunkManager.reset({ force: false });
   requestAnimationFrame(frame);
 }
 
@@ -93,7 +80,20 @@ async function init() {
   tileSet = await loadTileSet();
   renderer = createRenderer(canvas, cameraApi, tileSet);
 
-  reloadButton.addEventListener('click', () => loadWorld({ force: true }));
+  chunkManager = createWorldChunkManager({
+    onWorldChange: handleWorldChange,
+    onStatus: message => {
+      setBusy(message.startsWith('Cargando'));
+      const tileText = renderer.hasExternalTileSet ? `tileset externo (${tileSet.source})` : 'tileset procedural';
+      setStatus(`${message} Render: ${tileText}.`);
+    },
+  });
+
+  reloadButton.addEventListener('click', () => {
+    setBusy(true);
+    chunkManager.reset({ force: true });
+  });
+
   resetButton.addEventListener('click', () => {
     if (world) cameraApi.centerOn(world.bounds);
   });

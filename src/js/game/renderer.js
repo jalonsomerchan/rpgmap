@@ -15,20 +15,14 @@ export function createRenderer(canvas, cameraApi, tileSet) {
 
   function resize() {
     const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.floor(rect.width * dpr);
-    canvas.height = Math.floor(rect.height * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    canvas.width = Math.max(1, Math.floor(rect.width));
+    canvas.height = Math.max(1, Math.floor(rect.height));
   }
 
   function clear() {
-    const width = canvas.width;
-    const height = canvas.height;
-    ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = '#101b16';
-    ctx.fillRect(0, 0, width, height);
-    ctx.restore();
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
   function applyCamera() {
